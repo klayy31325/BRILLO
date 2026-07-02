@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoDoc | Procesador Pro</title>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.iife.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        /* Sidebar de Controles */
+        .sidebar {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            overflow-y: auto;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Área de carga mejorada */
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            padding: 30px 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: #f5f3ff;
+        }
+
+        .upload-zone input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        /* Controles */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary);
+        }
+
+        .input-text {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: inherit;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        button:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        /* Panel Principal de Imágenes */
+        .main-panel {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #lista-imagenes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .tarjeta-foto {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tarjeta-foto canvas {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .tarjeta-foto span {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Mensajes y Progreso */
+        #mensaje-estado {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .info {
+            background: #e0f2fe;
+            color: #0369a1;
+            display: block !important;
+        }
+
+        .exito {
+            background: #dcfce7;
+            color: #15803d;
+            display: block !important;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #b91c1c;
+            display: block !important;
+        }
+
+        .barra-progreso {
+            width: 100%;
+            height: 8px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+            overflow: hidden;
+        }
+
+        .relleno {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .sidebar {
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Barra lateral de controles -->
+        <aside class="sidebar">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z">
+                    </path>
+                    <circle cx="12" cy="13" r="3"></circle>
+                </svg>
+                PhotoDoc
+            </div>
+
+            <div class="upload-zone" id="drop-zone">
+                <span class="upload-icon">📁</span>
+                <p><strong>Haz clic para subir</strong><br><small>o arrastra las fotos aquí</small></p>
+                <input type="file" id="subir-lote" accept="image/*" multiple>
+            </div>
+
+            <div class="control-group">
+                <div style="display: flex; justify-content: space-between;">
+                    <label>Brillo General</label>
+                    <span id="porcentaje-txt" style="font-weight: bold; color: var(--primary);">0%</span>
+                </div>
+                <input type="range" id="brillo-global" min="-100" max="100" value="0" disabled>
+            </div>
+
+            <div class="control-group">
+                <label>Nombre del Documento</label>
+                <input type="text" id="nombre-archivo" class="input-text" value="reporte_imagenes">
+            </div>
+
+            <button id="btn-descargar" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Exportar a Word
+            </button>
+
+            <div id="txt-progreso" style="font-size:0.8rem; color: var(--text-muted); text-align: center;"></div>
+            <div class="barra-progreso" id="barra-progreso">
+                <div class="relleno" id="relleno-progreso"></div>
+            </div>
+
+            <div id="mensaje-estado"></div>
+        </aside>
+
+        <!-- Panel de vista previa -->
+        <main class="main-panel">
+            <div class="grid-header">
+                <h2 style="margin:0; font-size: 1.2rem;">Vista Previa de Imágenes</h2>
+                <small id="contador" style="color: var(--text-muted);">0 imágenes cargadas</small>
+            </div>
+
+            <div id="lista-imagenes">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const MAX_DIMENSION = 1600; // Reducido un poco para mejorar rendimiento en Word
+        const inputLote = document.getElementById('subir-lote');
+        const sliderBrillo = document.getElementById('brillo-global');
+        const txtPorcentaje = document.getElementById('porcentaje-txt');
+        const btnDescargar = document.getElementById('btn-descargar');
+        const listaImagenes = document.getElementById('lista-imagenes');
+        const txtProgreso = document.getElementById('txt-progreso');
+        const barraProgreso = document.getElementById('barra-progreso');
+        const rellenoProgreso = document.getElementById('relleno-progreso');
+        const mensajeEstado = document.getElementById('mensaje-estado');
+        const contadorTxt = document.getElementById('contador');
+
+        let imagenesCargadas = [];
+
+        function mostrarMensaje(texto, tipo) {
+            mensajeEstado.className = tipo;
+            mensajeEstado.textContent = texto;
+            mensajeEstado.style.display = 'block';
+        }
+
+        function ocultarMensaje() {
+            mensajeEstado.style.display = 'none';
+        }
+
+        function mostrarProgreso(etapa, porcentaje) {
+            txtProgreso.textContent = etapa;
+            if (porcentaje >= 0) {
+                barraProgreso.style.display = 'block';
+                rellenoProgreso.style.width = porcentaje + '%';
+            }
+        }
+
+        function redimensionarCanvas(img, maxDim) {
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+                const ratio = Math.min(maxDim / width, maxDim / height);
+                width = Math.round(width * ratio);
+                height = Math.round(height * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            return { canvas, ctx, width, height };
+        }
+
+        inputLote.addEventListener('change', handleArchivos);
+
+        async function handleArchivos(e) {
+            const archivos = Array.from(e.target.files);
+            if (archivos.length === 0) return;
+
+            listaImagenes.innerHTML = '';
+            imagenesCargadas = [];
+            sliderBrillo.value = 0;
+            sliderBrillo.disabled = false;
+            btnDescargar.disabled = false;
+            txtPorcentaje.innerText = "0%";
+            ocultarMensaje();
+
+            for (const archivo of archivos) {
+                const promesa = new Promise((resolve) => {
+                    const lector = new FileReader();
+                    lector.onload = (evento) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const { canvas, ctx, width, height } = redimensionarCanvas(img, MAX_DIMENSION);
+
+                            const contenedor = document.createElement('div');
+                            contenedor.className = 'tarjeta-foto';
+                            contenedor.innerHTML = `<span>${archivo.name}</span>`;
+                            contenedor.prepend(canvas);
+                            listaImagenes.appendChild(contenedor);
+
+                            const dataOriginal = ctx.getImageData(0, 0, width, height);
+                            imagenesCargadas.push({
+                                nombre: archivo.name,
+                                canvas, ctx, width, height, dataOriginal
+                            });
+                            resolve();
+                        };
+                        img.src = evento.target.result;
+                    };
+                    lector.readAsDataURL(archivo);
+                });
+                await promesa;
+                contadorTxt.innerText = `${imagenesCargadas.length} imágenes cargadas`;
+            }
+        }
+
+        sliderBrillo.addEventListener('input', (e) => {
+            const porcentaje = parseInt(e.target.value);
+            txtPorcentaje.innerText = porcentaje + "%";
+            const factor = (porcentaje / 100) * 128; // Factor de aclarado balanceado
+
+            imagenesCargadas.forEach(foto => {
+                foto.ctx.putImageData(foto.dataOriginal, 0, 0);
+                const copia = foto.ctx.getImageData(0, 0, foto.width, foto.height);
+                const pixeles = copia.data;
+
+                for (let i = 0; i < pixeles.length; i += 4) {
+                    pixeles[i] = Math.min(255, Math.max(0, pixeles[i] + factor));
+                    pixeles[i + 1] = Math.min(255, Math.max(0, pixeles[i + 1] + factor));
+                    pixeles[i + 2] = Math.min(255, Math.max(0, pixeles[i + 2] + factor));
+                }
+                foto.ctx.putImageData(copia, 0, 0);
+            });
+        });
+
+        btnDescargar.addEventListener('click', async () => {
+            ocultarMensaje();
+            btnDescargar.disabled = true;
+            btnDescargar.innerText = "Generando Word...";
+
+            try {
+                const { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType } = docx;
+                const hijosDocumento = [];
+
+                hijosDocumento.push(new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [new TextRun({ text: "REPORTE FOTOGRÁFICO", bold: true, size: 32, font: "Arial" })],
+                    spacing: { after: 400 }
+                }));
+
+                for (let i = 0; i < imagenesCargadas.length; i++) {
+                    const foto = imagenesCargadas[i];
+                    mostrarProgreso(`Procesando ${i + 1}/${imagenesCargadas.length}`, Math.round((i / imagenesCargadas.length) * 100));
+
+                    const blob = await new Promise(r => foto.canvas.toBlob(r, 'image/jpeg', 0.8));
+                    const arrayBuffer = await blob.arrayBuffer();
+
+                    // Ajuste de tamaño para que quepan 2 por página aprox
+                    const maxWidth = 450;
+                    const scale = maxWidth / foto.width;
+
+                    hijosDocumento.push(
+                        new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                                new ImageRun({
+                                    data: arrayBuffer,
+                                    transformation: {
+                                        width: maxWidth,
+                                        height: foto.height * scale
+                                    }
+                                }),
+                            ],
+                            spacing: { before: 200, after: 100 }
+                        }),
+                        new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [new TextRun({ text: `Imagen: ${foto.nombre}`, size: 18, color: "666666" })],
+                            spacing: { after: 400 }
+                        })
+                    );
+                }
+
+                const doc = new Document({ sections: [{ children: hijosDocumento }] });
+                const blobDoc = await Packer.toBlob(doc);
+
+                const nomArchivo = (document.getElementById('nombre-archivo').value || 'reporte') + '.docx';
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blobDoc);
+                link.download = nomArchivo;
+                link.click();
+
+                mostrarMensaje("¡Documento listo!", "exito");
+            } catch (err) {
+                mostrarMensaje("Error: " + err.message, "error");
+            } finally {
+                btnDescargar.disabled = false;
+                btnDescargar.innerText = "Exportar a Word";
+                barraProgreso.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+
+</html>
